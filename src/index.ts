@@ -1,0 +1,71 @@
+import express from 'express';
+import { queueGeneration } from './generator';
+
+const app = express();
+app.use(express.json({ limit: '1mb' }));
+
+const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET ?? '';
+
+// Health check — Railway uses this to confirm the service is alive
+app.get('/health', (_req, res) => {
+  res.json({ ok: true, queue: 'running' });
+});
+
+/**
+ * Supabase Database Webhook — fires on every UPDATE to the statuses table.
+ * We only act when is_paid flips from false → true.
+ *
+ * Configure the webhook in Supabase → Database → Webhooks:
+ *   Table:   statuses
+ *   Events:  UPDATE
+ *   URL:     https://<railway-domain>/webhook/status-paid
+ *   Headers: { Authorization: Bearer <WEBHOOK_SECRET> }
+ */
+app.post('/webhook/status-paid', async (req, res) => {
+  // Verify the shared secret set in the Supabase webhook header
+  if (WEBHOOK_SECRET) {
+    const auth = req.headers.authorization;
+    if (auth !== `Bearer ${WEBHOOK_SECRET}`) {
+      return res.sendStatus(401);
+    }
+  }
+
+  const { type, table, record, old_record } = req.body ?? {};
+
+  // Only handle UPDATE events on the statuses table
+  if (type !== 'UPDATE' || table !== 'statuses') {
+    return res.sendStatus(200);
+  }
+
+  // Only act when is_paid flips to true
+  if (!record?.is_paid || old_record?.is_paid) {
+    return res.sendStatus(200);
+  }
+
+  // Already generated — nothing to do
+  if (record.generated_video_url) {
+    return res.sendStatus(200);
+  }
+
+  // Acknowledge immediately so Supabase doesn't retry due to a slow response
+  res.sendStatus(200);
+
+  console.log(`[webhook] Queueing generation for status ${record.id}`);
+  queueGeneration(record.id as string).catch(console.error);
+});
+
+/**
+ * Manual trigger — useful for regenerating a specific ad without waiting for
+ * the webhook.  POST /generate { "status_id": "...", "secret": "..." }
+ */
+app.post('/generate', async (req, res) => {
+  const { status_id, secret } = req.body ?? {};
+  if (secret !== WEBHOOK_SECRET) return res.sendStatus(401);
+  if (!status_id) return res.status(400).json({ error: 'status_id required' });
+
+  res.json({ queued: true, status_id });
+  queueGeneration(status_id as string).catch(console.error);
+});
+
+const PORT = process.env.PORT ?? 3000;
+app.listen(PORT, () => console.log(`PrimeStatus video generator on :${PORT}`));
