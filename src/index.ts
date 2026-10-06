@@ -37,8 +37,10 @@ app.post('/webhook/status-paid', async (req, res) => {
     return res.sendStatus(200);
   }
 
-  // Only act when is_paid flips to true
-  if (!record?.is_paid || old_record?.is_paid) {
+  // Act when is_paid OR is_waived flips to true
+  const justPaid   = record?.is_paid   && !old_record?.is_paid;
+  const justWaived = record?.is_waived && !old_record?.is_waived;
+  if (!justPaid && !justWaived) {
     return res.sendStatus(200);
   }
 
