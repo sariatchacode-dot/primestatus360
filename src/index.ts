@@ -69,5 +69,50 @@ app.post('/generate', async (req, res) => {
   queueGeneration(status_id as string).catch(console.error);
 });
 
+/**
+ * App-callable trigger — the mobile app calls this when it enters the
+ * "waiting for video" state, ensuring generation is queued even if the
+ * pg_net webhook trigger misfired or was never reached.
+ *
+ * No secret required: we validate server-side that the status is genuinely
+ * paid/waived before queuing.  CORS is open so Expo web can call it.
+ */
+app.options('/request-generation', (_req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.sendStatus(204);
+});
+
+app.post('/request-generation', async (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+
+  const { status_id } = req.body ?? {};
+  if (!status_id) return res.status(400).json({ error: 'status_id required' });
+
+  // Validate via Supabase — only queue for genuinely paid/waived ads
+  const { createClient } = await import('@supabase/supabase-js');
+  const sb = createClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  );
+
+  const { data, error } = await sb
+    .from('statuses')
+    .select('id, is_paid, is_waived, generated_video_url, video_generation_status')
+    .eq('id', status_id)
+    .single();
+
+  if (error || !data) return res.status(404).json({ error: 'not found' });
+  if (!data.is_paid && !data.is_waived) return res.status(403).json({ error: 'not paid' });
+  if (data.generated_video_url)         return res.json({ queued: false, reason: 'already done' });
+  if (data.video_generation_status === 'processing') {
+    return res.json({ queued: false, reason: 'already processing' });
+  }
+
+  console.log(`[/request-generation] Queueing ${status_id} (triggered by app)`);
+  res.json({ queued: true, status_id });
+  queueGeneration(status_id as string).catch(console.error);
+});
+
 const PORT = process.env.PORT ?? 3000;
 app.listen(PORT, () => console.log(`PrimeStatus video generator on :${PORT}`));
