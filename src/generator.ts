@@ -120,7 +120,7 @@ async function generateVideo(statusId: string): Promise<void> {
       .from('statuses')
       .update({ video_generation_status: 'failed' })
       .eq('id', statusId)
-      .catch(console.error);
+      .then(undefined, console.error);
   } finally {
     await browser?.close().catch(() => {});
   }
