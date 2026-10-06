@@ -1,8 +1,11 @@
 FROM node:20-slim
 
-# Chromium + system fonts needed for Puppeteer
+# Chromium + Xvfb (virtual framebuffer) + system fonts
+# Xvfb is required: canvas.captureStream() needs a real X11 display compositor
+# to deliver frames to MediaRecorder. Without it the video is always empty.
 RUN apt-get update && apt-get install -y \
     chromium \
+    xvfb \
     fonts-liberation \
     fonts-noto-color-emoji \
     libatk-bridge2.0-0 \
@@ -49,4 +52,6 @@ RUN npm run build
 RUN npm prune --omit=dev
 
 EXPOSE 3000
-CMD ["npm", "start"]
+# xvfb-run starts a virtual display (:99, 1280x800 24-bit) so Chromium's
+# canvas compositing pipeline works — required for captureStream/MediaRecorder.
+CMD ["sh", "-c", "xvfb-run -a -s '-screen 0 1280x800x24' node dist/index.js"]

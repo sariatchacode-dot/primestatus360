@@ -48,16 +48,16 @@ async function generateVideo(statusId: string): Promise<void> {
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
-        '--disable-gpu',
+        // DO NOT use --disable-gpu: canvas.captureStream() requires the compositing
+        // pipeline. Xvfb provides the virtual display; SwiftShader provides software
+        // OpenGL so Chrome initialises without a real GPU card.
+        '--use-gl=swiftshader',
         '--use-fake-ui-for-media-stream',
         '--use-fake-device-for-media-stream',
         '--autoplay-policy=no-user-gesture-required',
-        // Prevent Chrome from throttling timers on "background" (headless) pages —
-        // the recording loop uses setInterval and needs to fire at real-time rate.
         '--disable-background-timer-throttling',
         '--disable-renderer-backgrounding',
         '--disable-backgrounding-occluded-windows',
-        // Keep the renderer alive during the full 35-second recording
         '--disable-hang-monitor',
       ],
     });
