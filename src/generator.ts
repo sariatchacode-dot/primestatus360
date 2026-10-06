@@ -49,11 +49,16 @@ async function generateVideo(statusId: string): Promise<void> {
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
         '--disable-gpu',
-        // Allow canvas.captureStream() + MediaRecorder without a real mic/cam
         '--use-fake-ui-for-media-stream',
         '--use-fake-device-for-media-stream',
-        // Let audio elements autoplay without a gesture
         '--autoplay-policy=no-user-gesture-required',
+        // Prevent Chrome from throttling timers on "background" (headless) pages —
+        // the recording loop uses setInterval and needs to fire at real-time rate.
+        '--disable-background-timer-throttling',
+        '--disable-renderer-backgrounding',
+        '--disable-backgrounding-occluded-windows',
+        // Keep the renderer alive during the full 35-second recording
+        '--disable-hang-monitor',
       ],
     });
 
