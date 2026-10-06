@@ -5,7 +5,7 @@ import ws from 'ws';
 const supabase = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { realtime: { transport: ws } },
+  { realtime: { transport: ws as any } },
 );
 
 const APP_URL   = (process.env.APP_URL ?? '').replace(/\/$/, ''); // e.g. https://primestatus.site
