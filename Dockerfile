@@ -6,6 +6,7 @@ FROM node:20-slim
 RUN apt-get update && apt-get install -y \
     chromium \
     xvfb \
+    xauth \
     fonts-liberation \
     fonts-noto-color-emoji \
     libatk-bridge2.0-0 \
