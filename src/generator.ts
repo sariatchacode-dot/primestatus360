@@ -63,7 +63,8 @@ async function generateVideo(statusId: string): Promise<void> {
     });
 
     const page = await browser.newPage();
-    await page.setViewport({ width: 1280, height: 800 });
+    // Match canvas dimensions (1080×1920) so the compositor renders the full frame
+    await page.setViewport({ width: 1080, height: 1920 });
 
     // Capture console messages from the page for debugging
     page.on('console', msg => console.log(`[${statusId}][page] ${msg.text()}`));
