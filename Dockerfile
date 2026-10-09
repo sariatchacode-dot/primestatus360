@@ -55,4 +55,4 @@ RUN npm prune --omit=dev
 EXPOSE 3000
 # xvfb-run starts a virtual display (:99, 1280x800 24-bit) so Chromium's
 # canvas compositing pipeline works — required for captureStream/MediaRecorder.
-CMD ["sh", "-c", "xvfb-run -a -s '-screen 0 1080x1920x24' node dist/index.js"]
+CMD ["sh", "-c", "xvfb-run -a -s '-screen 0 1280x800x24' node dist/index.js"]
