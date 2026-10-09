@@ -1,6 +1,7 @@
 FROM node:20-slim
 
 # Chromium + Xvfb (virtual framebuffer) + system fonts
+# retrigger
 # Xvfb is required: canvas.captureStream() needs a real X11 display compositor
 # to deliver frames to MediaRecorder. Without it the video is always empty.
 RUN apt-get update && apt-get install -y \
